@@ -201,6 +201,13 @@ function displayMangaDetail(data) {
     const author = manga.author || manga.penulis || 'Unknown';
     const chapters = manga.chapter_list || manga.daftar_chapter || manga.chapters || manga.list_chapter || [];
     
+    // ============ URUTKAN CHAPTER DARI KECIL KE BESAR ============
+    chapters.sort((a, b) => {
+        const numA = parseFloat(a.chapter) || 0;
+        const numB = parseFloat(b.chapter) || 0;
+        return numA - numB;
+    });
+    
     chapterListData = chapters.map((ch, index) => {
         const chapterNum = ch.chapter || ch.num || ch.number || ch.no || (index + 1);
         const chapterTitle = ch.title || ch.judul || `Chapter ${chapterNum}`;
@@ -243,7 +250,7 @@ function displayMangaDetail(data) {
                 const chapterDate = ch.date || ch.tanggal || ch.waktu || '';
                 
                 return `
-                    <div class="chapter-item" onclick="readChapter('${chapterSegment}', '${chapterTitle}', ${index})">
+                    <div class="chapter-item" onclick="readChapterBySegment('${chapterSegment}', '${chapterTitle}', ${index})">
                         <span class="chapter-num">Chapter ${chapterNum}</span>
                         <span class="chapter-title">${chapterTitle}</span>
                         ${chapterDate ? `<span class="chapter-date">${chapterDate}</span>` : ''}
@@ -311,8 +318,21 @@ window.getMangaDetail = async (slug) => {
     }
 };
 
+// ============ READ CHAPTER BY SEGMENT ============
+window.readChapterBySegment = async (segment, title, chapterIndex = 0) => {
+    if (!segment) {
+        alert('Segment chapter tidak valid!');
+        return;
+    }
+    
+    currentChapter = segment;
+    currentChapterIndex = chapterIndex;
+    
+    await readChapter(segment, title, chapterIndex);
+};
+
 // ============ READ CHAPTER ============
-window.readChapter = async (segment, title, chapterIndex = 0) => {
+async function readChapter(segment, title, chapterIndex = 0) {
     if (!segment) {
         alert('Segment chapter tidak valid!');
         return;
@@ -324,7 +344,6 @@ window.readChapter = async (segment, title, chapterIndex = 0) => {
     showLoading(true);
     detailSection.classList.add('hidden');
     readerSection.classList.remove('hidden');
-    chapterTitle.textContent = title || `Chapter ${segment}`;
     
     readerContainer.innerHTML = `
         <div style="text-align:center;padding:4rem;">
@@ -357,6 +376,11 @@ window.readChapter = async (segment, title, chapterIndex = 0) => {
         displayChapter(images);
         updateChapterNavigation();
         
+        // Tampilkan nomor chapter di header
+        const currentChapterNum = chapterListData[chapterIndex]?.chapter || '?';
+        const totalChapters = chapterListData.length;
+        chapterTitle.textContent = `Chapter ${currentChapterNum} / ${totalChapters}`;
+        
     } catch (error) {
         console.error('Error:', error);
         readerContainer.innerHTML = `
@@ -376,7 +400,7 @@ window.readChapter = async (segment, title, chapterIndex = 0) => {
     } finally {
         showLoading(false);
     }
-};
+}
 
 function displayChapter(images) {
     console.log(`🖼️ Menampilkan ${images.length} gambar`);
@@ -396,7 +420,20 @@ function displayChapter(images) {
 // ============ NAVIGASI CHAPTER ============
 function updateChapterNavigation() {
     const totalChapters = chapterListData.length;
-    const current = currentChapterIndex;
+    
+    // Cari posisi chapter saat ini di daftar
+    let currentIndex = -1;
+    for (let i = 0; i < chapterListData.length; i++) {
+        if (chapterListData[i].segment === currentChapter) {
+            currentIndex = i;
+            break;
+        }
+    }
+    
+    // Update currentChapterIndex biar sesuai
+    if (currentIndex !== -1) {
+        currentChapterIndex = currentIndex;
+    }
     
     const navInfo = document.getElementById('chapterNavInfo');
     const navInfoBottom = document.getElementById('chapterNavInfoBottom');
@@ -405,42 +442,65 @@ function updateChapterNavigation() {
     const prevBtnBottom = document.getElementById('prevChapterBtnBottom');
     const nextBtnBottom = document.getElementById('nextChapterBtnBottom');
     
-    const infoText = totalChapters > 0 ? `${current + 1} / ${totalChapters}` : '1 / 1';
+    // Tampilkan NOMOR chapter, bukan posisi
+    const currentChapterNum = chapterListData[currentChapterIndex]?.chapter || '?';
+    const totalDisplay = chapterListData.length;
+    const infoText = `Chapter ${currentChapterNum} / ${totalDisplay}`;
     
     if (navInfo) navInfo.textContent = infoText;
     if (navInfoBottom) navInfoBottom.textContent = infoText;
     
-    // Prev = ke kiri (index - 1)
-    if (prevBtn) prevBtn.disabled = current <= 0;
-    if (prevBtnBottom) prevBtnBottom.disabled = current <= 0;
+    // Prev = pindah ke chapter dengan nomor lebih kecil
+    if (prevBtn) prevBtn.disabled = currentChapterIndex <= 0;
+    if (prevBtnBottom) prevBtnBottom.disabled = currentChapterIndex <= 0;
     
-    // Next = ke kanan (index + 1)
-    if (nextBtn) nextBtn.disabled = current >= totalChapters - 1;
-    if (nextBtnBottom) nextBtnBottom.disabled = current >= totalChapters - 1;
+    // Next = pindah ke chapter dengan nomor lebih besar
+    if (nextBtn) nextBtn.disabled = currentChapterIndex >= totalChapters - 1;
+    if (nextBtnBottom) nextBtnBottom.disabled = currentChapterIndex >= totalChapters - 1;
     
-    console.log(`📍 Chapter ${current + 1}/${totalChapters} | Prev: ${current > 0}, Next: ${current < totalChapters - 1}`);
+    console.log(`📍 Chapter ${currentChapterNum} (posisi ${currentChapterIndex + 1}/${totalChapters})`);
 }
 
 // ============ FUNGSI NAVIGASI ============
-// PREV = index - 1
 function goToPrevChapter() {
-    console.log('⬅️ PREV - going to chapter', currentChapterIndex - 1);
-    if (currentChapterIndex > 0) {
-        const prev = chapterListData[currentChapterIndex - 1];
-        if (prev) {
-            readChapter(prev.segment || prev.slug || prev.link, prev.title || `Chapter ${prev.chapter}`, currentChapterIndex - 1);
+    // Cari posisi chapter saat ini
+    let currentIndex = -1;
+    for (let i = 0; i < chapterListData.length; i++) {
+        if (chapterListData[i].segment === currentChapter) {
+            currentIndex = i;
+            break;
         }
+    }
+    
+    if (currentIndex === -1) return;
+    
+    // Pindah ke indeks sebelumnya (chapter dengan nomor lebih kecil)
+    const prevIndex = currentIndex - 1;
+    if (prevIndex >= 0) {
+        const prev = chapterListData[prevIndex];
+        console.log(`⬅️ PREV: Chapter ${prev.chapter} (dari posisi ${currentIndex + 1} ke ${prevIndex + 1})`);
+        readChapter(prev.segment || prev.slug || prev.link, prev.title || `Chapter ${prev.chapter}`, prevIndex);
     }
 }
 
-// NEXT = index + 1
 function goToNextChapter() {
-    console.log('➡️ NEXT - going to chapter', currentChapterIndex + 1);
-    if (currentChapterIndex < chapterListData.length - 1) {
-        const next = chapterListData[currentChapterIndex + 1];
-        if (next) {
-            readChapter(next.segment || next.slug || next.link, next.title || `Chapter ${next.chapter}`, currentChapterIndex + 1);
+    // Cari posisi chapter saat ini
+    let currentIndex = -1;
+    for (let i = 0; i < chapterListData.length; i++) {
+        if (chapterListData[i].segment === currentChapter) {
+            currentIndex = i;
+            break;
         }
+    }
+    
+    if (currentIndex === -1) return;
+    
+    // Pindah ke indeks selanjutnya (chapter dengan nomor lebih besar)
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < chapterListData.length) {
+        const next = chapterListData[nextIndex];
+        console.log(`➡️ NEXT: Chapter ${next.chapter} (dari posisi ${currentIndex + 1} ke ${nextIndex + 1})`);
+        readChapter(next.segment || next.slug || next.link, next.title || `Chapter ${next.chapter}`, nextIndex);
     }
 }
 
@@ -452,7 +512,6 @@ window.retryChapter = function() {
 };
 
 // ============ EVENT LISTENER NAVIGASI ============
-// PASTIKAN: Prev -> goToPrevChapter, Next -> goToNextChapter
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔗 Setting up navigation...');
     
