@@ -411,13 +411,17 @@ function updateChapterNavigation() {
     if (navInfo) navInfo.textContent = infoText;
     if (navInfoBottom) navInfoBottom.textContent = infoText;
     
+    // Prev button disabled kalau di chapter pertama
     if (prevBtn) prevBtn.disabled = current <= 0;
-    if (nextBtn) nextBtn.disabled = current >= totalChapters - 1;
     if (prevBtnBottom) prevBtnBottom.disabled = current <= 0;
+    
+    // Next button disabled kalau di chapter terakhir
+    if (nextBtn) nextBtn.disabled = current >= totalChapters - 1;
     if (nextBtnBottom) nextBtnBottom.disabled = current >= totalChapters - 1;
 }
 
 function goToPrevChapter() {
+    console.log('⬅️ Prev chapter clicked');
     if (currentChapterIndex > 0) {
         const prev = chapterListData[currentChapterIndex - 1];
         if (prev) {
@@ -427,6 +431,7 @@ function goToPrevChapter() {
 }
 
 function goToNextChapter() {
+    console.log('➡️ Next chapter clicked');
     if (currentChapterIndex < chapterListData.length - 1) {
         const next = chapterListData[currentChapterIndex + 1];
         if (next) {
@@ -435,18 +440,14 @@ function goToNextChapter() {
     }
 }
 
-// ============ RETRY CHAPTER ============
-window.retryChapter = function() {
-    if (currentChapter) {
-        readChapter(currentChapter, chapterTitle.textContent, currentChapterIndex);
-    }
-};
-
 // ============ EVENT LISTENER NAVIGASI ============
 document.addEventListener('DOMContentLoaded', () => {
+    // PREV BUTTONS
     document.getElementById('prevChapterBtn')?.addEventListener('click', goToPrevChapter);
-    document.getElementById('nextChapterBtn')?.addEventListener('click', goToNextChapter);
     document.getElementById('prevChapterBtnBottom')?.addEventListener('click', goToPrevChapter);
+    
+    // NEXT BUTTONS
+    document.getElementById('nextChapterBtn')?.addEventListener('click', goToNextChapter);
     document.getElementById('nextChapterBtnBottom')?.addEventListener('click', goToNextChapter);
 });
 
