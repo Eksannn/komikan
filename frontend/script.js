@@ -597,10 +597,10 @@ window.retryChapter = function() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔗 Setting up navigation...');
     
-    const prevBtn1 = document.getElementById('prevChapterBtn');
-    const prevBtn2 = document.getElementById('prevChapterBtnBottom');
-    const nextBtn1 = document.getElementById('nextChapterBtn');
-    const nextBtn2 = document.getElementById('nextChapterBtnBottom');
+    const prevBtn1 = document.getElementById('nextChapterBtn');
+    const prevBtn2 = document.getElementById('nextChapterBtnBottom');
+    const nextBtn1 = document.getElementById('prevChapterBtn');
+    const nextBtn2 = document.getElementById('prevChapterBtnBottom');
     
     if (prevBtn1) {
         prevBtn1.addEventListener('click', goToPrevChapter);
