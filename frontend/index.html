@@ -63,6 +63,18 @@
                 <i class="fas fa-arrow-left"></i> Kembali
             </button>
             <div id="mangaDetail"></div>
+            
+            <!-- ============ SEARCH CHAPTER ============ -->
+            <div class="chapter-search-container">
+                <div class="chapter-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="chapterSearchInput" placeholder="Cari chapter (contoh: 100, 120-130, 150+)..." autocomplete="off">
+                </div>
+                <div class="chapter-search-hint">
+                    <span>💡 Cari: angka spesifik (120) | range (120-130) | keatas (150+) | kebawah (<50)</span>
+                </div>
+            </div>
+            
             <div id="chapterList" class="chapter-list"></div>
         </section>
 
@@ -80,8 +92,8 @@
                 <button id="prevChapterBtn" disabled>
                     <i class="fas fa-chevron-left"></i> Sebelumnya
                 </button>
-                <span class="chapter-info" id="chapterNavInfo">1 / 100</span>
-                <button id="nextChapterBtn">
+                <span class="chapter-info" id="chapterNavInfo">1 / 1</span>
+                <button id="nextChapterBtn" disabled>
                     Selanjutnya <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
@@ -94,8 +106,8 @@
                 <button id="prevChapterBtnBottom" disabled>
                     <i class="fas fa-chevron-left"></i> Sebelumnya
                 </button>
-                <span class="chapter-info" id="chapterNavInfoBottom">1 / 100</span>
-                <button id="nextChapterBtnBottom">
+                <span class="chapter-info" id="chapterNavInfoBottom">1 / 1</span>
+                <button id="nextChapterBtnBottom" disabled>
                     Selanjutnya <i class="fas fa-chevron-right"></i>
                 </button>
             </div>

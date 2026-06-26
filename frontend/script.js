@@ -201,7 +201,7 @@ function displayMangaDetail(data) {
     const author = manga.author || manga.penulis || 'Unknown';
     const chapters = manga.chapter_list || manga.daftar_chapter || manga.chapters || manga.list_chapter || [];
     
-    // ============ URUTKAN CHAPTER DARI KECIL KE BESAR ============
+    // ============ URUTKAN CHAPTER DARI 1 ============
     chapters.sort((a, b) => {
         const numA = parseFloat(a.chapter) || 0;
         const numB = parseFloat(b.chapter) || 0;
@@ -250,7 +250,7 @@ function displayMangaDetail(data) {
                 const chapterDate = ch.date || ch.tanggal || ch.waktu || '';
                 
                 return `
-                    <div class="chapter-item" onclick="readChapterBySegment('${chapterSegment}', '${chapterTitle}', ${index})">
+                    <div class="chapter-item" onclick="readChapter('${chapterSegment}', '${chapterTitle}', ${index})">
                         <span class="chapter-num">Chapter ${chapterNum}</span>
                         <span class="chapter-title">${chapterTitle}</span>
                         ${chapterDate ? `<span class="chapter-date">${chapterDate}</span>` : ''}
@@ -260,6 +260,99 @@ function displayMangaDetail(data) {
         `;
     } else {
         chapterList.innerHTML = '<p>Tidak ada chapter</p>';
+    }
+    
+    // ============ SETUP SEARCH CHAPTER ============
+    setTimeout(setupChapterSearch, 100);
+}
+
+// ============ SEARCH CHAPTER ============
+function setupChapterSearch() {
+    const searchInput = document.getElementById('chapterSearchInput');
+    if (!searchInput) return;
+    
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        searchTimeout = setTimeout(() => {
+            filterChapters(query);
+        }, 300);
+    });
+}
+
+function filterChapters(query) {
+    const chapterItems = document.querySelectorAll('.chapter-item');
+    if (!chapterItems.length) return;
+    
+    // Reset semua
+    chapterItems.forEach(item => item.style.display = '');
+    
+    // Hapus pesan no-result lama
+    const existingMsg = document.querySelector('.chapter-search-no-result');
+    if (existingMsg) existingMsg.remove();
+    
+    if (!query) return;
+    
+    let found = 0;
+    
+    chapterItems.forEach(item => {
+        const numElement = item.querySelector('.chapter-num');
+        if (!numElement) return;
+        
+        const chapterText = numElement.textContent.toLowerCase();
+        const chapterNum = chapterText.replace('chapter ', '');
+        
+        let show = false;
+        
+        // Format: 120
+        if (/^\d+$/.test(query)) {
+            show = chapterNum === query;
+        }
+        // Format: 120-130
+        else if (/^\d+\s*-\s*\d+$/.test(query)) {
+            const [start, end] = query.split('-').map(n => parseInt(n.trim()));
+            const num = parseInt(chapterNum);
+            show = num >= start && num <= end;
+        }
+        // Format: 150+
+        else if (/^\d+\s*\+$/.test(query)) {
+            const min = parseInt(query.replace('+', '').trim());
+            const num = parseInt(chapterNum);
+            show = num >= min;
+        }
+        // Format: <150
+        else if (/^<\s*\d+$/.test(query)) {
+            const max = parseInt(query.replace('<', '').trim());
+            const num = parseInt(chapterNum);
+            show = num <= max;
+        }
+        // Text match
+        else {
+            show = chapterText.includes(query.toLowerCase());
+        }
+        
+        if (show) {
+            found++;
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Tampilkan pesan jika tidak ada yang ditemukan
+    if (found === 0 && query) {
+        const msg = document.createElement('div');
+        msg.className = 'chapter-search-no-result';
+        msg.innerHTML = `
+            <i class="fas fa-exclamation-circle"></i>
+            <p>Tidak ada chapter yang cocok dengan: <strong>${query}</strong></p>
+            <p style="font-size:0.8rem;margin-top:0.3rem;">Coba: 120, 120-130, 150+, atau <150</p>
+        `;
+        const chapterList = document.getElementById('chapterList');
+        chapterList.appendChild(msg);
     }
 }
 
@@ -318,21 +411,8 @@ window.getMangaDetail = async (slug) => {
     }
 };
 
-// ============ READ CHAPTER BY SEGMENT ============
-window.readChapterBySegment = async (segment, title, chapterIndex = 0) => {
-    if (!segment) {
-        alert('Segment chapter tidak valid!');
-        return;
-    }
-    
-    currentChapter = segment;
-    currentChapterIndex = chapterIndex;
-    
-    await readChapter(segment, title, chapterIndex);
-};
-
 // ============ READ CHAPTER ============
-async function readChapter(segment, title, chapterIndex = 0) {
+window.readChapter = async (segment, title, chapterIndex = 0) => {
     if (!segment) {
         alert('Segment chapter tidak valid!');
         return;
@@ -376,7 +456,6 @@ async function readChapter(segment, title, chapterIndex = 0) {
         displayChapter(images);
         updateChapterNavigation();
         
-        // Tampilkan nomor chapter di header
         const currentChapterNum = chapterListData[chapterIndex]?.chapter || '?';
         const totalChapters = chapterListData.length;
         chapterTitle.textContent = `Chapter ${currentChapterNum} / ${totalChapters}`;
@@ -400,7 +479,7 @@ async function readChapter(segment, title, chapterIndex = 0) {
     } finally {
         showLoading(false);
     }
-}
+};
 
 function displayChapter(images) {
     console.log(`🖼️ Menampilkan ${images.length} gambar`);
@@ -421,7 +500,6 @@ function displayChapter(images) {
 function updateChapterNavigation() {
     const totalChapters = chapterListData.length;
     
-    // Cari posisi chapter saat ini di daftar
     let currentIndex = -1;
     for (let i = 0; i < chapterListData.length; i++) {
         if (chapterListData[i].segment === currentChapter) {
@@ -430,7 +508,6 @@ function updateChapterNavigation() {
         }
     }
     
-    // Update currentChapterIndex biar sesuai
     if (currentIndex !== -1) {
         currentChapterIndex = currentIndex;
     }
@@ -442,7 +519,6 @@ function updateChapterNavigation() {
     const prevBtnBottom = document.getElementById('prevChapterBtnBottom');
     const nextBtnBottom = document.getElementById('nextChapterBtnBottom');
     
-    // Tampilkan NOMOR chapter, bukan posisi
     const currentChapterNum = chapterListData[currentChapterIndex]?.chapter || '?';
     const totalDisplay = chapterListData.length;
     const infoText = `Chapter ${currentChapterNum} / ${totalDisplay}`;
@@ -450,11 +526,9 @@ function updateChapterNavigation() {
     if (navInfo) navInfo.textContent = infoText;
     if (navInfoBottom) navInfoBottom.textContent = infoText;
     
-    // Prev = pindah ke chapter dengan nomor lebih kecil
     if (prevBtn) prevBtn.disabled = currentChapterIndex <= 0;
     if (prevBtnBottom) prevBtnBottom.disabled = currentChapterIndex <= 0;
     
-    // Next = pindah ke chapter dengan nomor lebih besar
     if (nextBtn) nextBtn.disabled = currentChapterIndex >= totalChapters - 1;
     if (nextBtnBottom) nextBtnBottom.disabled = currentChapterIndex >= totalChapters - 1;
     
@@ -463,7 +537,6 @@ function updateChapterNavigation() {
 
 // ============ FUNGSI NAVIGASI ============
 function goToPrevChapter() {
-    // Cari posisi chapter saat ini
     let currentIndex = -1;
     for (let i = 0; i < chapterListData.length; i++) {
         if (chapterListData[i].segment === currentChapter) {
@@ -474,17 +547,15 @@ function goToPrevChapter() {
     
     if (currentIndex === -1) return;
     
-    // Pindah ke indeks sebelumnya (chapter dengan nomor lebih kecil)
     const prevIndex = currentIndex - 1;
     if (prevIndex >= 0) {
         const prev = chapterListData[prevIndex];
-        console.log(`⬅️ PREV: Chapter ${prev.chapter} (dari posisi ${currentIndex + 1} ke ${prevIndex + 1})`);
+        console.log(`⬅️ PREV: Chapter ${prev.chapter}`);
         readChapter(prev.segment || prev.slug || prev.link, prev.title || `Chapter ${prev.chapter}`, prevIndex);
     }
 }
 
 function goToNextChapter() {
-    // Cari posisi chapter saat ini
     let currentIndex = -1;
     for (let i = 0; i < chapterListData.length; i++) {
         if (chapterListData[i].segment === currentChapter) {
@@ -495,11 +566,10 @@ function goToNextChapter() {
     
     if (currentIndex === -1) return;
     
-    // Pindah ke indeks selanjutnya (chapter dengan nomor lebih besar)
     const nextIndex = currentIndex + 1;
     if (nextIndex < chapterListData.length) {
         const next = chapterListData[nextIndex];
-        console.log(`➡️ NEXT: Chapter ${next.chapter} (dari posisi ${currentIndex + 1} ke ${nextIndex + 1})`);
+        console.log(`➡️ NEXT: Chapter ${next.chapter}`);
         readChapter(next.segment || next.slug || next.link, next.title || `Chapter ${next.chapter}`, nextIndex);
     }
 }
@@ -520,7 +590,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextBtn1 = document.getElementById('nextChapterBtn');
     const nextBtn2 = document.getElementById('nextChapterBtnBottom');
     
-    // PREV -> goToPrevChapter (index - 1)
     if (prevBtn1) {
         prevBtn1.addEventListener('click', goToPrevChapter);
         console.log('✅ prevChapterBtn -> goToPrevChapter');
@@ -530,7 +599,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ prevChapterBtnBottom -> goToPrevChapter');
     }
     
-    // NEXT -> goToNextChapter (index + 1)
     if (nextBtn1) {
         nextBtn1.addEventListener('click', goToNextChapter);
         console.log('✅ nextChapterBtn -> goToNextChapter');
@@ -579,7 +647,6 @@ document.addEventListener('keydown', (e) => {
         searchInput.focus();
     }
     
-    // Keyboard: Panah kiri = PREV, Panah kanan = NEXT
     if (!readerSection.classList.contains('hidden')) {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
