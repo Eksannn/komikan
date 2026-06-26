@@ -1,6 +1,8 @@
 // ============ STATE ============
 let currentSlug = null;
 let currentChapter = null;
+let currentChapterIndex = 0;
+let chapterListData = [];
 
 // ============ DOM ELEMENTS ============
 const searchInput = document.getElementById('searchInput');
@@ -60,10 +62,6 @@ function displayComics(container, comics) {
     }
 
     container.innerHTML = comics.slice(0, 20).map((comic, index) => {
-        // DEBUG: Lihat struktur data di console
-        console.log('📖 Comic data:', comic);
-        
-        // EKSTRAK SLUG
         let slug = '';
         if (comic.link) {
             const match = comic.link.match(/\/manga\/([^\/]+)\/?/);
@@ -83,22 +81,7 @@ function displayComics(container, comics) {
             slug = comic.slug || comic.endpoint || comic.id || `komik-${index}`;
         }
         
-        // TITLE
-        const title = comic.title || comic.judul || comic.name || 'No Title';
-        
-        // ============ FIX: CARI GAMBAR DARI BERBAGAI FIELD ============
-        let thumb = '';
-        if (comic.image) thumb = comic.image;
-        else if (comic.thumb) thumb = comic.thumb;
-        else if (comic.gambar) thumb = comic.gambar;
-        else if (comic.cover) thumb = comic.cover;
-        else if (comic.img) thumb = comic.img;
-        else if (comic.poster) thumb = comic.poster;
-        else if (comic.thumbnail) thumb = comic.thumbnail;
-        else if (comic.cover_url) thumb = comic.cover_url;
-        else if (comic.cover_image) thumb = comic.cover_image;
-        
-        // Kalau masih kosong, coba cari di dalam object
+        let thumb = comic.image || comic.thumb || comic.gambar || comic.cover || comic.img || '';
         if (!thumb && typeof comic === 'object') {
             for (const key of Object.keys(comic)) {
                 const val = comic[key];
@@ -111,10 +94,9 @@ function displayComics(container, comics) {
             }
         }
         
-        console.log(`📸 Title: ${title} -> Thumb: ${thumb ? thumb.substring(0, 60) : 'TIDAK ADA'}`);
-        
+        const title = comic.title || comic.judul || 'No Title';
         const chapter = comic.chapter || comic.chapter_terbaru || '';
-        const genre = comic.genre || comic.genre_list || comic.tags || [];
+        const genre = comic.genre || comic.genre_list || [];
         const genreText = Array.isArray(genre) ? genre.slice(0, 2).join(' • ') : genre || 'Komik';
         const status = comic.status || comic.type || '';
 
@@ -219,6 +201,19 @@ function displayMangaDetail(data) {
     const author = manga.author || manga.penulis || 'Unknown';
     const chapters = manga.chapter_list || manga.daftar_chapter || manga.chapters || manga.list_chapter || [];
     
+    // ============ SIMPAN DAFTAR CHAPTER UNTUK NAVIGASI ============
+    chapterListData = chapters.map((ch, index) => {
+        const chapterNum = ch.chapter || ch.num || ch.number || ch.no || (index + 1);
+        const chapterTitle = ch.title || ch.judul || `Chapter ${chapterNum}`;
+        const chapterSegment = ch.segment || ch.slug || ch.endpoint || ch.link || chapterNum;
+        return {
+            ...ch,
+            chapter: chapterNum,
+            title: chapterTitle,
+            segment: chapterSegment
+        };
+    });
+    
     mangaDetail.innerHTML = `
         <div class="cover">
             <img src="${thumb ? `/proxy-image?url=${encodeURIComponent(thumb)}` : 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22280%22%3E%3Crect width=%22200%22 height=%22280%22 fill=%22%2316213e%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23e94560%22 font-size=%2220%22%3ENo%20Cover%3C/text%3E%3C/svg%3E'}" 
@@ -249,7 +244,7 @@ function displayMangaDetail(data) {
                 const chapterDate = ch.date || ch.tanggal || ch.waktu || '';
                 
                 return `
-                    <div class="chapter-item" onclick="readChapter('${chapterSegment}', '${chapterTitle}')">
+                    <div class="chapter-item" onclick="readChapter('${chapterSegment}', '${chapterTitle}', ${index})">
                         <span class="chapter-num">Chapter ${chapterNum}</span>
                         <span class="chapter-title">${chapterTitle}</span>
                         ${chapterDate ? `<span class="chapter-date">${chapterDate}</span>` : ''}
@@ -318,17 +313,20 @@ window.getMangaDetail = async (slug) => {
 };
 
 // ============ READ CHAPTER ============
-window.readChapter = async (segment, title) => {
+window.readChapter = async (segment, title, chapterIndex = 0) => {
     if (!segment) {
         alert('Segment chapter tidak valid!');
         return;
     }
     
     currentChapter = segment;
+    currentChapterIndex = chapterIndex;
+    
     showLoading(true);
     detailSection.classList.add('hidden');
     readerSection.classList.remove('hidden');
     chapterTitle.textContent = title || `Chapter ${segment}`;
+    
     readerContainer.innerHTML = `
         <div style="text-align:center;padding:4rem;">
             <div class="spinner" style="margin:0 auto;"></div>
@@ -345,7 +343,6 @@ window.readChapter = async (segment, title) => {
         if (!Array.isArray(images)) images = [images];
         images = images.filter(img => typeof img === 'string' && img.trim());
         
-        // Perbaiki URL gambar
         images = images.map(img => {
             let url = img.trim();
             if (url.startsWith('//')) url = 'https:' + url;
@@ -354,15 +351,13 @@ window.readChapter = async (segment, title) => {
         });
         
         console.log(`🖼️ Total images: ${images.length}`);
-        if (images.length > 0) {
-            console.log('📸 Sample URL:', images[0].substring(0, 80) + '...');
-        }
-        
         if (images.length === 0) {
             throw new Error('Tidak ada gambar untuk chapter ini');
         }
         
         displayChapter(images);
+        updateChapterNavigation();
+        
     } catch (error) {
         console.error('Error:', error);
         readerContainer.innerHTML = `
@@ -388,26 +383,72 @@ function displayChapter(images) {
     console.log(`🖼️ Menampilkan ${images.length} gambar`);
     
     readerContainer.innerHTML = images.map((img, index) => `
-        <div style="margin-bottom:0.5rem;position:relative;">
+        <div class="page-wrapper">
             <img src="/proxy-image?url=${encodeURIComponent(img)}" 
                  alt="Halaman ${index + 1}" 
                  loading="lazy"
-                 style="width:100%;border-radius:8px;display:block;"
-                 onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'text-align:center;padding:2rem;background:var(--bg-card);border-radius:8px;color:var(--text-secondary);\\'><i class=\\'fas fa-image\\' style=\\'font-size:2rem;display:block;margin-bottom:0.5rem;\\'></i><p>Gambar ${index + 1} gagal</p><p style=\\'font-size:0.7rem;word-break:break-all;\\'>${img.substring(0, 60)}...</p></div>'">
-            <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);color:white;padding:2px 10px;border-radius:10px;font-size:0.7rem;">
-                ${index + 1}/${images.length}
-            </div>
+                 onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'text-align:center;padding:2rem;background:var(--bg-card);border-radius:8px;color:var(--text-secondary);\\'><i class=\\'fas fa-image\\' style=\\'font-size:2rem;display:block;margin-bottom:0.5rem;\\'></i><p>Gambar ${index + 1} gagal</p></div>'">
         </div>
     `).join('');
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ============ NAVIGASI CHAPTER ============
+function updateChapterNavigation() {
+    const totalChapters = chapterListData.length;
+    const current = currentChapterIndex;
+    
+    const navInfo = document.getElementById('chapterNavInfo');
+    const navInfoBottom = document.getElementById('chapterNavInfoBottom');
+    const prevBtn = document.getElementById('prevChapterBtn');
+    const nextBtn = document.getElementById('nextChapterBtn');
+    const prevBtnBottom = document.getElementById('prevChapterBtnBottom');
+    const nextBtnBottom = document.getElementById('nextChapterBtnBottom');
+    
+    const infoText = totalChapters > 0 ? `${current + 1} / ${totalChapters}` : '1 / 1';
+    
+    if (navInfo) navInfo.textContent = infoText;
+    if (navInfoBottom) navInfoBottom.textContent = infoText;
+    
+    if (prevBtn) prevBtn.disabled = current <= 0;
+    if (nextBtn) nextBtn.disabled = current >= totalChapters - 1;
+    if (prevBtnBottom) prevBtnBottom.disabled = current <= 0;
+    if (nextBtnBottom) nextBtnBottom.disabled = current >= totalChapters - 1;
+}
+
+function goToPrevChapter() {
+    if (currentChapterIndex > 0) {
+        const prev = chapterListData[currentChapterIndex - 1];
+        if (prev) {
+            readChapter(prev.segment || prev.slug || prev.link, prev.title || `Chapter ${prev.chapter}`, currentChapterIndex - 1);
+        }
+    }
+}
+
+function goToNextChapter() {
+    if (currentChapterIndex < chapterListData.length - 1) {
+        const next = chapterListData[currentChapterIndex + 1];
+        if (next) {
+            readChapter(next.segment || next.slug || next.link, next.title || `Chapter ${next.chapter}`, currentChapterIndex + 1);
+        }
+    }
+}
+
+// ============ RETRY CHAPTER ============
 window.retryChapter = function() {
     if (currentChapter) {
-        readChapter(currentChapter, chapterTitle.textContent);
+        readChapter(currentChapter, chapterTitle.textContent, currentChapterIndex);
     }
 };
+
+// ============ EVENT LISTENER NAVIGASI ============
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('prevChapterBtn')?.addEventListener('click', goToPrevChapter);
+    document.getElementById('nextChapterBtn')?.addEventListener('click', goToNextChapter);
+    document.getElementById('prevChapterBtnBottom')?.addEventListener('click', goToPrevChapter);
+    document.getElementById('nextChapterBtnBottom')?.addEventListener('click', goToNextChapter);
+});
 
 // ============ NAVIGATION ============
 function backToHomepage() {
@@ -434,6 +475,7 @@ backToDetail.addEventListener('click', backToDetailPage);
 
 // ============ KEYBOARD SHORTCUTS ============
 document.addEventListener('keydown', (e) => {
+    // ESC untuk kembali
     if (e.key === 'Escape') {
         if (!readerSection.classList.contains('hidden')) {
             backToDetailPage();
@@ -441,9 +483,22 @@ document.addEventListener('keydown', (e) => {
             backToHomepage();
         }
     }
+    
+    // Ctrl+/ untuk search
     if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
         searchInput.focus();
+    }
+    
+    // Panah kiri/kanan untuk navigasi chapter
+    if (!readerSection.classList.contains('hidden')) {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            goToPrevChapter();
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            goToNextChapter();
+        }
     }
 });
 
@@ -451,3 +506,4 @@ document.addEventListener('keydown', (e) => {
 loadAllData();
 console.log('📚 Komikan siap!');
 console.log('💡 Tips: Ctrl+/ untuk search, Esc untuk kembali');
+console.log('📖 Tips: Panah kiri/kanan untuk ganti chapter');

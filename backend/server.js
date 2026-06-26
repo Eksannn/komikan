@@ -31,8 +31,6 @@ function checkRateLimit() {
 // ============ MIDDLEWARE ============
 app.use(cors());
 app.use(express.json());
-
-// ============ SERVE STATIC FILES ============
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ============ CACHE ============
