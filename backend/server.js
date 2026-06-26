@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // ============ KONFIGURASI ============
 const BASE_URL = 'https://www.sankavollerei.web.id/comic';
@@ -12,7 +12,7 @@ const BASE_URL = 'https://www.sankavollerei.web.id/comic';
 // ============ RATE LIMIT ============
 let requestCount = 0;
 let windowStart = Date.now();
-const MAX_REQUESTS = 80;
+const MAX_REQUESTS = 40;
 const WINDOW_MS = 60000;
 
 function checkRateLimit() {
@@ -31,11 +31,13 @@ function checkRateLimit() {
 // ============ MIDDLEWARE ============
 app.use(cors());
 app.use(express.json());
-app.use(express.static('frontend'));
+
+// ============ SERVE STATIC FILES ============
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ============ CACHE ============
 const cache = {};
-const CACHE_DURATION = 120000; // 2 menit
+const CACHE_DURATION = 120000;
 
 function getCache(key) {
     if (cache[key] && Date.now() - cache[key].timestamp < CACHE_DURATION) {
@@ -57,7 +59,6 @@ function sleep(ms) {
 async function apiCall(endpoint, params = {}, retries = 3) {
     checkRateLimit();
     
-    // Pastikan endpoint dimulai dengan /
     let cleanEndpoint = endpoint;
     if (!cleanEndpoint.startsWith('/')) {
         cleanEndpoint = '/' + cleanEndpoint;
@@ -260,11 +261,9 @@ app.get('/api/detail/:slug', async (req, res) => {
     if (cached) return res.json(cached);
     
     try {
-        // Coba dua format endpoint
         let data = null;
         let error = null;
         
-        // Format 1: /comic/{slug}
         try {
             data = await apiCall(`/comic/${slug}`, {}, 2);
             if (data && (data.title || data.judul || data.data)) {
@@ -276,7 +275,6 @@ app.get('/api/detail/:slug', async (req, res) => {
             error = e;
         }
         
-        // Format 2: /comic/comic/{slug} (fallback)
         if (!data) {
             try {
                 data = await apiCall(`/comic/comic/${slug}`, {}, 2);
@@ -323,7 +321,6 @@ app.get('/api/chapter/:slug', async (req, res) => {
         const data = await apiCall(`/chapter/${slug}`, {}, 3);
         console.log(`✅ Chapter berhasil: ${slug}`);
         
-        // Ekstrak gambar
         let images = [];
         if (data.images && Array.isArray(data.images)) {
             images = data.images;
@@ -337,7 +334,6 @@ app.get('/api/chapter/:slug', async (req, res) => {
             images = data;
         }
         
-        // Bersihkan URL
         images = images.filter(img => typeof img === 'string' && img.trim()).map(img => {
             let url = img.trim();
             if (url.startsWith('//')) url = 'https:' + url;
@@ -377,12 +373,20 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// ============ PORT ============
-const PORT = process.env.PORT || 3000;  // PAKAI INI!
-
-app.listen(PORT, () => {
-    console.log(`🚀 Komikan running at http://localhost:${PORT}`);
-    console.log(`📚 Base URL: ${BASE_URL}`);
-    console.log(`⚡ Rate Limit: ${MAX_REQUESTS}/menit`);
-    console.log(`💾 Cache: ${CACHE_DURATION/1000} detik`);
+// ============ MAIN ROUTE ============
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
+
+// ============ EXPORT UNTUK VERCEL ============
+module.exports = app;
+
+// ============ START SERVER (LOKAL) ============
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Komikan running at http://localhost:${PORT}`);
+        console.log(`📚 Base URL: ${BASE_URL}`);
+        console.log(`⚡ Rate Limit: ${MAX_REQUESTS}/menit`);
+        console.log(`💾 Cache: ${CACHE_DURATION/1000} detik`);
+    });
+}
