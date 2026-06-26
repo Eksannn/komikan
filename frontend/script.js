@@ -294,44 +294,56 @@ function filterChapters(query) {
     const existingMsg = document.querySelector('.chapter-search-no-result');
     if (existingMsg) existingMsg.remove();
     
-    if (!query) return;
+    // Jika query kosong, tampilkan semua
+    if (!query || query.trim() === '') return;
     
+    const searchTerm = query.trim().toLowerCase();
     let found = 0;
     
     chapterItems.forEach(item => {
         const numElement = item.querySelector('.chapter-num');
         if (!numElement) return;
         
+        // Ambil angka chapter (contoh: "Chapter 120" -> "120")
         const chapterText = numElement.textContent.toLowerCase();
-        const chapterNum = chapterText.replace('chapter ', '');
+        const chapterNum = chapterText.replace('chapter', '').trim();
         
         let show = false;
         
-        // Format: 120
-        if (/^\d+$/.test(query)) {
-            show = chapterNum === query;
+        // ============ FORMAT PENCARIAN ============
+        // 1. Angka spesifik: "120" -> cocok dengan chapter 120
+        if (/^\d+$/.test(searchTerm)) {
+            show = chapterNum === searchTerm;
         }
-        // Format: 120-130
-        else if (/^\d+\s*-\s*\d+$/.test(query)) {
-            const [start, end] = query.split('-').map(n => parseInt(n.trim()));
+        // 2. Range: "120-130" -> cocok chapter 120-130
+        else if (/^\d+\s*-\s*\d+$/.test(searchTerm)) {
+            const [start, end] = searchTerm.split('-').map(n => parseInt(n.trim()));
             const num = parseInt(chapterNum);
             show = num >= start && num <= end;
         }
-        // Format: 150+
-        else if (/^\d+\s*\+$/.test(query)) {
-            const min = parseInt(query.replace('+', '').trim());
+        // 3. Keatas: "150+" -> cocok chapter 150 keatas
+        else if (/^\d+\s*\+$/.test(searchTerm)) {
+            const min = parseInt(searchTerm.replace('+', '').trim());
             const num = parseInt(chapterNum);
             show = num >= min;
         }
-        // Format: <150
-        else if (/^<\s*\d+$/.test(query)) {
-            const max = parseInt(query.replace('<', '').trim());
+        // 4. Kebawah: "<50" -> cocok chapter 1-49
+        else if (/^<\s*\d+$/.test(searchTerm)) {
+            const max = parseInt(searchTerm.replace('<', '').trim());
             const num = parseInt(chapterNum);
             show = num <= max;
         }
-        // Text match
+        // 5. Cari di title atau angka (fallback)
         else {
-            show = chapterText.includes(query.toLowerCase());
+            // Cari di nomor chapter
+            show = chapterNum.includes(searchTerm);
+            // Atau cari di title
+            if (!show) {
+                const titleElement = item.querySelector('.chapter-title');
+                if (titleElement) {
+                    show = titleElement.textContent.toLowerCase().includes(searchTerm);
+                }
+            }
         }
         
         if (show) {
@@ -343,13 +355,13 @@ function filterChapters(query) {
     });
     
     // Tampilkan pesan jika tidak ada yang ditemukan
-    if (found === 0 && query) {
+    if (found === 0) {
         const msg = document.createElement('div');
         msg.className = 'chapter-search-no-result';
         msg.innerHTML = `
             <i class="fas fa-exclamation-circle"></i>
-            <p>Tidak ada chapter yang cocok dengan: <strong>${query}</strong></p>
-            <p style="font-size:0.8rem;margin-top:0.3rem;">Coba: 120, 120-130, 150+, atau <150</p>
+            <p>Tidak ada chapter yang cocok dengan: <strong>${searchTerm}</strong></p>
+            <p style="font-size:0.8rem;margin-top:0.3rem;">Coba: 120, 120-130, 150+, atau <50</p>
         `;
         const chapterList = document.getElementById('chapterList');
         chapterList.appendChild(msg);
