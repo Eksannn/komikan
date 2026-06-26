@@ -411,17 +411,20 @@ function updateChapterNavigation() {
     if (navInfo) navInfo.textContent = infoText;
     if (navInfoBottom) navInfoBottom.textContent = infoText;
     
-    // Prev button disabled kalau di chapter pertama
+    // Prev = ke kiri (index - 1)
     if (prevBtn) prevBtn.disabled = current <= 0;
     if (prevBtnBottom) prevBtnBottom.disabled = current <= 0;
     
-    // Next button disabled kalau di chapter terakhir
+    // Next = ke kanan (index + 1)
     if (nextBtn) nextBtn.disabled = current >= totalChapters - 1;
     if (nextBtnBottom) nextBtnBottom.disabled = current >= totalChapters - 1;
+    
+    console.log(`📍 Chapter ${current + 1}/${totalChapters} | Prev: ${current > 0}, Next: ${current < totalChapters - 1}`);
 }
 
+// ============ FUNGSI NAVIGASI ============
 function goToPrevChapter() {
-    console.log('⬅️ Prev chapter clicked');
+    console.log('⬅️ PREV button clicked - going to chapter', currentChapterIndex - 1);
     if (currentChapterIndex > 0) {
         const prev = chapterListData[currentChapterIndex - 1];
         if (prev) {
@@ -431,7 +434,7 @@ function goToPrevChapter() {
 }
 
 function goToNextChapter() {
-    console.log('➡️ Next chapter clicked');
+    console.log('➡️ NEXT button clicked - going to chapter', currentChapterIndex + 1);
     if (currentChapterIndex < chapterListData.length - 1) {
         const next = chapterListData[currentChapterIndex + 1];
         if (next) {
@@ -440,15 +443,43 @@ function goToNextChapter() {
     }
 }
 
+// ============ RETRY CHAPTER ============
+window.retryChapter = function() {
+    if (currentChapter) {
+        readChapter(currentChapter, chapterTitle.textContent, currentChapterIndex);
+    }
+};
+
 // ============ EVENT LISTENER NAVIGASI ============
-document.addEventListener('DOMContentLoaded', () => {
-    // PREV BUTTONS
-    document.getElementById('prevChapterBtn')?.addEventListener('click', goToPrevChapter);
-    document.getElementById('prevChapterBtnBottom')?.addEventListener('click', goToPrevChapter);
+// PASTIKAN INI BENAR
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔗 Setting up navigation event listeners...');
     
-    // NEXT BUTTONS
-    document.getElementById('nextChapterBtn')?.addEventListener('click', goToNextChapter);
-    document.getElementById('nextChapterBtnBottom')?.addEventListener('click', goToNextChapter);
+    // PREV BUTTONS -> panggil goToPrevChapter
+    const prevBtn1 = document.getElementById('prevChapterBtn');
+    const prevBtn2 = document.getElementById('prevChapterBtnBottom');
+    
+    if (prevBtn1) {
+        prevBtn1.addEventListener('click', goToPrevChapter);
+        console.log('✅ prevChapterBtn attached');
+    }
+    if (prevBtn2) {
+        prevBtn2.addEventListener('click', goToPrevChapter);
+        console.log('✅ prevChapterBtnBottom attached');
+    }
+    
+    // NEXT BUTTONS -> panggil goToNextChapter
+    const nextBtn1 = document.getElementById('nextChapterBtn');
+    const nextBtn2 = document.getElementById('nextChapterBtnBottom');
+    
+    if (nextBtn1) {
+        nextBtn1.addEventListener('click', goToNextChapter);
+        console.log('✅ nextChapterBtn attached');
+    }
+    if (nextBtn2) {
+        nextBtn2.addEventListener('click', goToNextChapter);
+        console.log('✅ nextChapterBtnBottom attached');
+    }
 });
 
 // ============ NAVIGATION ============
@@ -491,7 +522,7 @@ document.addEventListener('keydown', (e) => {
         searchInput.focus();
     }
     
-    // Panah kiri/kanan untuk navigasi chapter
+    // Panah kiri = PREV, Panah kanan = NEXT
     if (!readerSection.classList.contains('hidden')) {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
