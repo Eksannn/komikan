@@ -201,7 +201,6 @@ function displayMangaDetail(data) {
     const author = manga.author || manga.penulis || 'Unknown';
     const chapters = manga.chapter_list || manga.daftar_chapter || manga.chapters || manga.list_chapter || [];
     
-    // ============ SIMPAN DAFTAR CHAPTER UNTUK NAVIGASI ============
     chapterListData = chapters.map((ch, index) => {
         const chapterNum = ch.chapter || ch.num || ch.number || ch.no || (index + 1);
         const chapterTitle = ch.title || ch.judul || `Chapter ${chapterNum}`;
@@ -423,8 +422,9 @@ function updateChapterNavigation() {
 }
 
 // ============ FUNGSI NAVIGASI ============
+// PREV = index - 1
 function goToPrevChapter() {
-    console.log('⬅️ PREV button clicked - going to chapter', currentChapterIndex - 1);
+    console.log('⬅️ PREV - going to chapter', currentChapterIndex - 1);
     if (currentChapterIndex > 0) {
         const prev = chapterListData[currentChapterIndex - 1];
         if (prev) {
@@ -433,8 +433,9 @@ function goToPrevChapter() {
     }
 }
 
+// NEXT = index + 1
 function goToNextChapter() {
-    console.log('➡️ NEXT button clicked - going to chapter', currentChapterIndex + 1);
+    console.log('➡️ NEXT - going to chapter', currentChapterIndex + 1);
     if (currentChapterIndex < chapterListData.length - 1) {
         const next = chapterListData[currentChapterIndex + 1];
         if (next) {
@@ -451,34 +452,33 @@ window.retryChapter = function() {
 };
 
 // ============ EVENT LISTENER NAVIGASI ============
-// PASTIKAN INI BENAR
+// PASTIKAN: Prev -> goToPrevChapter, Next -> goToNextChapter
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔗 Setting up navigation event listeners...');
+    console.log('🔗 Setting up navigation...');
     
-    // PREV BUTTONS -> panggil goToPrevChapter
     const prevBtn1 = document.getElementById('prevChapterBtn');
     const prevBtn2 = document.getElementById('prevChapterBtnBottom');
-    
-    if (prevBtn1) {
-        prevBtn1.addEventListener('click', goToPrevChapter);
-        console.log('✅ prevChapterBtn attached');
-    }
-    if (prevBtn2) {
-        prevBtn2.addEventListener('click', goToPrevChapter);
-        console.log('✅ prevChapterBtnBottom attached');
-    }
-    
-    // NEXT BUTTONS -> panggil goToNextChapter
     const nextBtn1 = document.getElementById('nextChapterBtn');
     const nextBtn2 = document.getElementById('nextChapterBtnBottom');
     
+    // PREV -> goToPrevChapter (index - 1)
+    if (prevBtn1) {
+        prevBtn1.addEventListener('click', goToPrevChapter);
+        console.log('✅ prevChapterBtn -> goToPrevChapter');
+    }
+    if (prevBtn2) {
+        prevBtn2.addEventListener('click', goToPrevChapter);
+        console.log('✅ prevChapterBtnBottom -> goToPrevChapter');
+    }
+    
+    // NEXT -> goToNextChapter (index + 1)
     if (nextBtn1) {
         nextBtn1.addEventListener('click', goToNextChapter);
-        console.log('✅ nextChapterBtn attached');
+        console.log('✅ nextChapterBtn -> goToNextChapter');
     }
     if (nextBtn2) {
         nextBtn2.addEventListener('click', goToNextChapter);
-        console.log('✅ nextChapterBtnBottom attached');
+        console.log('✅ nextChapterBtnBottom -> goToNextChapter');
     }
 });
 
@@ -507,7 +507,6 @@ backToDetail.addEventListener('click', backToDetailPage);
 
 // ============ KEYBOARD SHORTCUTS ============
 document.addEventListener('keydown', (e) => {
-    // ESC untuk kembali
     if (e.key === 'Escape') {
         if (!readerSection.classList.contains('hidden')) {
             backToDetailPage();
@@ -516,20 +515,19 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Ctrl+/ untuk search
     if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
         searchInput.focus();
     }
     
-    // Panah kiri = PREV, Panah kanan = NEXT
+    // Keyboard: Panah kiri = PREV, Panah kanan = NEXT
     if (!readerSection.classList.contains('hidden')) {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            goToNextChapter();
+            goToPrevChapter();
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            goToPrevChapter();
+            goToNextChapter();
         }
     }
 });
