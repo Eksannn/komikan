@@ -526,10 +526,10 @@ document.addEventListener('keydown', (e) => {
     if (!readerSection.classList.contains('hidden')) {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            goToPrevChapter();
+            goToNextChapter();
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            goToNextChapter();
+            goToPrevChapter();
         }
     }
 });
