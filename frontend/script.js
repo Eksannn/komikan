@@ -294,56 +294,44 @@ function filterChapters(query) {
     const existingMsg = document.querySelector('.chapter-search-no-result');
     if (existingMsg) existingMsg.remove();
     
-    // Jika query kosong, tampilkan semua
-    if (!query || query.trim() === '') return;
+    if (!query) return;
     
-    const searchTerm = query.trim().toLowerCase();
     let found = 0;
     
     chapterItems.forEach(item => {
         const numElement = item.querySelector('.chapter-num');
         if (!numElement) return;
         
-        // Ambil angka chapter (contoh: "Chapter 120" -> "120")
         const chapterText = numElement.textContent.toLowerCase();
-        const chapterNum = chapterText.replace('chapter', '').trim();
+        const chapterNum = chapterText.replace('chapter ', '');
         
         let show = false;
         
-        // ============ FORMAT PENCARIAN ============
-        // 1. Angka spesifik: "120" -> cocok dengan chapter 120
-        if (/^\d+$/.test(searchTerm)) {
-            show = chapterNum === searchTerm;
+        // Format: 120
+        if (/^\d+$/.test(query)) {
+            show = chapterNum === query;
         }
-        // 2. Range: "120-130" -> cocok chapter 120-130
-        else if (/^\d+\s*-\s*\d+$/.test(searchTerm)) {
-            const [start, end] = searchTerm.split('-').map(n => parseInt(n.trim()));
+        // Format: 120-130
+        else if (/^\d+\s*-\s*\d+$/.test(query)) {
+            const [start, end] = query.split('-').map(n => parseInt(n.trim()));
             const num = parseInt(chapterNum);
             show = num >= start && num <= end;
         }
-        // 3. Keatas: "150+" -> cocok chapter 150 keatas
-        else if (/^\d+\s*\+$/.test(searchTerm)) {
-            const min = parseInt(searchTerm.replace('+', '').trim());
+        // Format: 150+
+        else if (/^\d+\s*\+$/.test(query)) {
+            const min = parseInt(query.replace('+', '').trim());
             const num = parseInt(chapterNum);
             show = num >= min;
         }
-        // 4. Kebawah: "<50" -> cocok chapter 1-49
-        else if (/^<\s*\d+$/.test(searchTerm)) {
-            const max = parseInt(searchTerm.replace('<', '').trim());
+        // Format: <150
+        else if (/^<\s*\d+$/.test(query)) {
+            const max = parseInt(query.replace('<', '').trim());
             const num = parseInt(chapterNum);
             show = num <= max;
         }
-        // 5. Cari di title atau angka (fallback)
+        // Text match
         else {
-            // Cari di nomor chapter
-            show = chapterNum.includes(searchTerm);
-            // Atau cari di title
-            if (!show) {
-                const titleElement = item.querySelector('.chapter-title');
-                if (titleElement) {
-                    show = titleElement.textContent.toLowerCase().includes(searchTerm);
-                }
-            }
+            show = chapterText.includes(query.toLowerCase());
         }
         
         if (show) {
@@ -355,13 +343,13 @@ function filterChapters(query) {
     });
     
     // Tampilkan pesan jika tidak ada yang ditemukan
-    if (found === 0) {
+    if (found === 0 && query) {
         const msg = document.createElement('div');
         msg.className = 'chapter-search-no-result';
         msg.innerHTML = `
             <i class="fas fa-exclamation-circle"></i>
-            <p>Tidak ada chapter yang cocok dengan: <strong>${searchTerm}</strong></p>
-            <p style="font-size:0.8rem;margin-top:0.3rem;">Coba: 120, 120-130, 150+, atau <50</p>
+            <p>Tidak ada chapter yang cocok dengan: <strong>${query}</strong></p>
+            <p style="font-size:0.8rem;margin-top:0.3rem;">Coba: 120, 120-130, 150+, atau <150</p>
         `;
         const chapterList = document.getElementById('chapterList');
         chapterList.appendChild(msg);
@@ -597,26 +585,26 @@ window.retryChapter = function() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔗 Setting up navigation...');
     
-    const prevBtn1 = document.getElementById('nextChapterBtn');
-    const prevBtn2 = document.getElementById('nextChapterBtnBottom');
-    const nextBtn1 = document.getElementById('prevChapterBtn');
-    const nextBtn2 = document.getElementById('prevChapterBtnBottom');
+    const prevBtn1 = document.getElementById('prevChapterBtn');
+    const prevBtn2 = document.getElementById('prevChapterBtnBottom');
+    const nextBtn1 = document.getElementById('nextChapterBtn');
+    const nextBtn2 = document.getElementById('nextChapterBtnBottom');
     
-    if (prevBtn1) {
-        prevBtn1.addEventListener('click', goToPrevChapter);
+    if (nextBtn1) {
+        nextBtn1.addEventListener('click', goToPrevChapter);
         console.log('✅ prevChapterBtn -> goToPrevChapter');
     }
-    if (prevBtn2) {
-        prevBtn2.addEventListener('click', goToPrevChapter);
+    if (nextBtn2) {
+        nextBtn2.addEventListener('click', goToPrevChapter);
         console.log('✅ prevChapterBtnBottom -> goToPrevChapter');
     }
     
-    if (nextBtn1) {
-        nextBtn1.addEventListener('click', goToNextChapter);
+    if (prevBtn1) {
+        prevBtn1.addEventListener('click', goToNextChapter);
         console.log('✅ nextChapterBtn -> goToNextChapter');
     }
-    if (nextBtn2) {
-        nextBtn2.addEventListener('click', goToNextChapter);
+    if (prevBtn2) {
+        prevBtn2.addEventListener('click', goToNextChapter);
         console.log('✅ nextChapterBtnBottom -> goToNextChapter');
     }
 });
