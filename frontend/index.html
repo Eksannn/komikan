@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Komikan - Baca Komik Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <div class="logo">
+            <i class="fas fa-book-open"></i>
+            <h1>Komikan</h1>
+        </div>
+        <div class="search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Cari komik..." autocomplete="off">
+        </div>
+        <div class="header-actions">
+            <button id="themeToggle" class="theme-btn">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main>
+        <!-- Loading -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Memuat komik...</p>
+        </div>
+
+        <!-- POPULER -->
+        <section id="populerSection">
+            <h2 class="section-title"><i class="fas fa-fire"></i> Komik Populer</h2>
+            <div id="populerList" class="comic-grid"></div>
+        </section>
+
+        <!-- TERBARU -->
+        <section id="terbaruSection">
+            <h2 class="section-title"><i class="fas fa-clock"></i> Komik Terbaru</h2>
+            <div id="terbaruList" class="comic-grid"></div>
+        </section>
+
+        <!-- REKOMENDASI -->
+        <section id="rekomendasiSection">
+            <h2 class="section-title"><i class="fas fa-star"></i> Rekomendasi</h2>
+            <div id="rekomendasiList" class="comic-grid"></div>
+        </section>
+
+        <!-- SEARCH -->
+        <section id="searchSection" class="hidden">
+            <h2 class="section-title"><i class="fas fa-search"></i> Hasil Pencarian</h2>
+            <div id="searchList" class="comic-grid"></div>
+        </section>
+
+        <!-- DETAIL -->
+        <section id="detailSection" class="hidden">
+            <button id="backToHome" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <div id="mangaDetail"></div>
+            <div id="chapterList" class="chapter-list"></div>
+        </section>
+
+        <!-- READER -->
+        <section id="readerSection" class="hidden">
+            <div class="reader-header">
+                <button id="backToDetail" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </button>
+                <span id="chapterTitle">Chapter</span>
+            </div>
+            <div id="readerContainer" class="reader-container"></div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>© 2026 Komikan | Eksan</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
